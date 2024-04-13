@@ -56,3 +56,9 @@ gprof: $(SOURCES) $(DEPENDENCIES)
 
 doc:
 	doxygen Doxyfile
+
+push:
+	git push
+
+pull:
+	git pull
