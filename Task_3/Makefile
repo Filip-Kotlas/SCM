@@ -1,10 +1,11 @@
 SHELL := /bin/bash
 CXX := nvcc
-CXXFLAGS := -O3  -use_fast_math -restrict -lm  -lcudart -lcublas
+CXXFLAGS := -O3  -use_fast_math -restrict -lm  -lcudart
+LINKFLAGS := -lcublas
 
 .PHONY: default clean run
 
-default: cuda_thrust.out cuda_uni_thrust.out cuda_uni.out cuda.out
+default: cuda_thrust.out cuda_uni_thrust.out cuda_uni.out cuda.out cublas.out
 
 cuda_thrust.out: data_mv_GH_thrust.cu
 	$(CXX)  $< -o $@
@@ -17,6 +18,9 @@ cuda_uni.out: data_mv_GH_unified.cu
 
 cuda.out: data_mv_GH.cu
 	$(CXX)  $< -o $@
+
+cublas.out: cublas.cu
+	$(CXX)  $< -I openblas -I /opt/cuda/targets/x86_64-linux/include $(LINKFLAGS) -o $@
 
 run: cuda_thrust.out cuda_uni_thrust.out cuda_uni.out cuda.out
 	./cuda_thrust.out

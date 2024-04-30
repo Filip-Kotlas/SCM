@@ -64,24 +64,24 @@ int main(void)
 
     float *a_h = new float [N];     // host data
     float *b_h = new float [N];     // host data
-    float *a_d, *b_d;                    // device data
+    float *a_d, *b_d;               // device data
     cudaMalloc((void **) &a_d, nBytes);
-    cudaMalloc((void **) &b_d, nBytes);
+    cudaMalloc((void **) &b_d, nBytes);    
 
     for (int i = 0; i < N; i++) a_h[i] = 100.0f + static_cast<float>(i);
 
     cudaMemcpy(a_d, a_h, nBytes, cudaMemcpyHostToDevice);    //  a_d <- a_h
     cudaMemcpy(b_d, a_d, nBytes, cudaMemcpyDeviceToDevice);  //  b_d <- a_d
 
-// ---------------------------------------------------------
+    // ---------------------------------------------------------
 // Manipulate on GPU
     t1 = chrono::high_resolution_clock::now();
     inc_gpu <<< numBlocks, blockSize>>>(b_d, N);             //  b_d := b_d+1.0
     cudaDeviceSynchronize();
     t2 = chrono::high_resolution_clock::now();
-
+    
     cout << cudaGetErrorName(cudaGetLastError()) << endl;
-
+    
     cudaMemcpy(b_h, b_d, nBytes, cudaMemcpyDeviceToHost);    //  b_h <- b_d
 
 // Check on CPU
