@@ -4,8 +4,8 @@
 #include <iostream>
 #include <chrono>
 
+#define EPS 1e-4
 
-__global__ void equal( bool* are_equal, const float* const x, const float* const y, int N );
 __global__ void equal( bool* are_equal, const float* const x, const float* const y, int N )
 {
     extern __shared__ bool s_data[];
@@ -14,13 +14,11 @@ __global__ void equal( bool* are_equal, const float* const x, const float* const
     const int stride = gridDim.x * blockDim.x * num_load;
 
     bool is_equal = true;
-    for( unsigned int i = idx; i < N; i += stride )
+    unsigned int i = idx;
+    while( is_equal && i < N )
     {
-        if( x[i] != y[i] )
-        {
-            is_equal = false;
-            break;
-        }
+        is_equal = ( abs(x[i] - y[i]) < EPS );  
+        i += stride;
     }
     s_data[threadIdx.x] = is_equal;
     __syncthreads();
@@ -28,14 +26,14 @@ __global__ void equal( bool* are_equal, const float* const x, const float* const
     for( unsigned int str = blockDim.x/2; str > 0; str >>= 1 )
     {
         if (threadIdx.x < str)
-            s_data[threadIdx.x] = s_data[threadIdx.x + str] ? s_data[threadIdx.x] : false;
+            s_data[threadIdx.x] = s_data[threadIdx.x + str] && s_data[threadIdx.x];
+            //s_data[threadIdx.x] = s_data[threadIdx.x + str] ? s_data[threadIdx.x] : false;
         __syncthreads();
     }
     if( threadIdx.x == 0 ) 
         are_equal[blockIdx.x] = s_data[0];
 }
 
-__global__ void block_reduction(bool* data_arr, int size );
 __global__ void block_reduction(bool* data_arr, int size )
 {
     if( size > static_cast<int>(blockDim.x) )
@@ -53,7 +51,8 @@ __global__ void block_reduction(bool* data_arr, int size )
     {
         if( tid < stride )
         {
-            s_data[tid] = s_data[tid + stride] ? s_data[tid] : false;
+            s_data[tid] = s_data[tid + stride] && s_data[tid];
+            //s_data[tid] = s_data[tid + stride] ? s_data[tid] : false;
         }
         __syncthreads();
     }
@@ -95,12 +94,26 @@ bool are_equal(const float* const x_d, const float* const y_d, int N)
     return equal;
 }
 
+__global__ void equal_with_one_common_variable( bool* are_equal_global, const float* const x, const float* const y, int N )
+{
+    const int idx = blockIdx.x * blockDim.x + threadIdx.x;
+    if (idx < N)
+    {
+        if( ( abs(x[idx] - y[idx]) >= EPS ) )
+        {
+            *are_equal_global = false;
+        }
+        // I have to use if to avoid race condition.
+        //*are_equal_global = *are_equal_global && ( abs(x[idx] - y[idx]) < EPS );
+    }
+}
+
 int main(void)
 {
     float *x_h, *y_h; // vectors on host
     float *x_d, *y_d; // vectors on device
 
-    const int N = 100000000;
+    const long int N = 100000000;
     const int nBytes = N * sizeof(float);
     const int LOOP = 10;
     bool equal = true;
@@ -122,9 +135,13 @@ int main(void)
         x_h[i] = (i % 137) + 1;
         y_h[i] = (i % 137) + 1;
     }
-    //Replace one component of vector to see wheater the code notices that the vectors don't match.
-    x_h[N * 5 / 8] = 140;
-    y_h[N * 5 / 8] = 140;
+    //Replace one component of vector to see wheather the code notices that the vectors don't match.
+    int long index = 400 * 2 * 2 * 2 * 2;
+    x_h[index] = 140;
+    y_h[index] = 140;
+    x_h[index + index] = 145;
+    y_h[index + index] = 140;
+    //y_h[N-1] = 145;
 
     //copying data from host to device
     cudaMemcpy(x_d, x_h, nBytes, cudaMemcpyHostToDevice);
@@ -133,8 +150,10 @@ int main(void)
     equal = are_equal(x_d, y_d, N );
 
     std::cout << "N: " << N << std::endl;
+    std::cout << "LOOP: " << LOOP << std::endl;
 
-    std::cout << std::endl << "Comparing vectors on gpu:" << std::endl;
+    std::cout << std::endl << "1) Comparing vectors on gpu:" << std::endl;
+    std::cout << "  a) Standard algorithm: " << std::endl;
 
     cudaEventRecord(start);
     for( int i = 0; i < LOOP; i++ )
@@ -146,39 +165,80 @@ int main(void)
     cudaEventElapsedTime(&time_span_gpu, start, stop);
 
     if(equal)
-        std::cout << "Vectors are equal." << std::endl;
+        std::cout << "    Vectors are equal." << std::endl;
     else
-        std::cout << "Vectors are not equal." << std::endl;
+        std::cout << "    Vectors are not equal." << std::endl;
 
-    std::cout << "Computation on gpu took " << time_span_gpu << " milliseconds." << std::endl << std::endl;
+    std::cout << "    Computation took " << time_span_gpu << " milliseconds." << std::endl << std::endl;
+
+    std::cout << "  b) One common variable algorithm: " << std::endl;
+
+    dim3 dimBlock, dimGrid;
+    cudaDeviceProp prop;
+    cudaGetDeviceProperties (&prop, 0);
+    const int blocksize = 8 * 64,
+              gridsize = (N + blocksize - 1) / blocksize;
+    dimBlock = dim3(blocksize);
+    dimGrid  = dim3(1 * gridsize);
+
+    bool* equal_host = new bool;
+    *equal_host = true;
+    bool* equal_device_global;
+    cudaMalloc((void **) &equal_device_global, sizeof(bool));
+    cudaMemcpy( equal_device_global, equal_host, sizeof(bool), cudaMemcpyHostToDevice);
+
+    cudaEventRecord(start);
+    for( int i = 0; i < LOOP; i++ )
+    {
+        cudaMemcpy( equal_device_global, equal_host, sizeof(bool), cudaMemcpyHostToDevice);
+        equal_with_one_common_variable<<< dimGrid, dimBlock >>>(equal_device_global, x_d, y_d, N);
+    }
+    cudaEventRecord(stop);
+    cudaEventSynchronize(stop);
+    cudaEventElapsedTime(&time_span_gpu, start, stop);
+
+    cudaMemcpy( equal_host, equal_device_global,  sizeof(bool), cudaMemcpyDeviceToHost );
+
+    if(*equal_host)
+        std::cout << "    Vectors are equal." << std::endl;
+    else
+        std::cout << "    Vectors are not equal." << std::endl;
+
+    std::cout << "    Computation took " << time_span_gpu << " milliseconds." << std::endl << std::endl;
 
     std::chrono::time_point<std::chrono::system_clock> t1, t2;
     std::chrono::duration<double, std::milli>  time_span_cpu;
 
-    std::cout << "Comparing vectors on cpu:" << std::endl;
+    std::cout << "2) Comparing vectors on cpu:" << std::endl;
 
     bool standard_equal = true;
     t1 = std::chrono::high_resolution_clock::now();
     for( int i = 0; i < LOOP; i++ )
     {
-        for( int j = 0; j < N; j++ )
+        int j = 0;
+        while( standard_equal && j < N )
         {
-            if( x_h[j] != y_h[j] )
-            {
-                standard_equal = false;
-                break;
-            }
+            standard_equal = abs( x_h[j] - y_h[j] ) < EPS;
+            j++;
         }
     }
     t2 = std::chrono::high_resolution_clock::now();
     time_span_cpu = t2 - t1;
     
     if(standard_equal)
-        std::cout << "Vectors are equal." << std::endl;
+        std::cout << "  Vectors are equal." << std::endl;
     else
-        std::cout << "Vectors are not equal." << std::endl;
+        std::cout << "  Vectors are not equal." << std::endl;
 
-    std::cout << "Computation on cpu took " << time_span_cpu.count() << " milliseconds." << std::endl << std::endl;
+    std::cout << "  Computation on cpu took " << time_span_cpu.count() << " milliseconds." << std::endl << std::endl;
+
+    //dealocating
+    delete equal_host;
+    delete[] x_h;
+    delete[] y_h;
+    cudaFree( equal_device_global );
+    cudaFree( x_d );
+    cudaFree( y_d );
 
     return 0;
 }

@@ -5,7 +5,7 @@ LINKFLAGS := -lcublas
 
 .PHONY: default clean run
 
-default: cuda_thrust.out cuda_uni_thrust.out cuda_uni.out cuda.out cublas.out
+default: cuda_thrust.out cuda_uni_thrust.out cuda_uni.out cuda.out cublas.out equal.out
 
 cuda_thrust.out: data_mv_GH_thrust.cu
 	$(CXX)  $< -o $@
@@ -21,6 +21,9 @@ cuda.out: data_mv_GH.cu
 
 cublas.out: cublas.cu
 	$(CXX)  $< -I openblas -I /opt/cuda/targets/x86_64-linux/include $(LINKFLAGS) -o $@
+
+equal.out: equal_reduction.cu
+	$(CXX)  $< -o $@
 
 run: cuda_thrust.out cuda_uni_thrust.out cuda_uni.out cuda.out
 	./cuda_thrust.out
