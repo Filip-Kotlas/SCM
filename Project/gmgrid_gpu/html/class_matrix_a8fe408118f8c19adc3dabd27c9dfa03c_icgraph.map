@@ -1,0 +1,9 @@
+<map id="Matrix::GetDiag" name="Matrix::GetDiag">
+<area shape="rect" id="Node000001" title=" " alt="" coords="433,5,546,30"/>
+<area shape="rect" id="Node000002" href="$jacsolve_8cpp.html#af6d8532779532c2b508347732c085d48" title="Simple diagonale preconditioning." alt="" coords="289,5,385,30"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="418,20,386,20,386,15,418,15"/>
+<area shape="rect" id="Node000003" href="$class_multigrid.html#a0f21bbdf22733439c05508331237a369" title=" " alt="" coords="103,5,241,30"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="273,20,242,20,242,15,273,15"/>
+<area shape="rect" id="Node000004" href="$main_8cpp.html#a3c04138a5bfe5d72780bb7e82a18e627" title=" " alt="" coords="5,5,55,30"/>
+<area shape="poly" id="edge3_Node000003_Node000004" title=" " alt="" coords="87,20,55,20,55,15,87,15"/>
+</map>

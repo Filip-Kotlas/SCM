@@ -1,0 +1,5 @@
+<map id="CRS_Matrix::getNumberOffDiagonals" name="CRS_Matrix::getNumberOffDiagonals">
+<area shape="rect" id="Node000001" title="Determines the number of subdiagonals and superdiagonals of matrix. Prepares for a banded matrix stor..." alt="" coords="244,5,424,44"/>
+<area shape="rect" id="Node000002" href="$class_c_r_s___matrix.html#aa97d003aec539564c015d384db7eed24" title="Returns a banded matrix AB according to LAPACK format in the FORTRAN interface, i...." alt="" coords="5,5,196,44"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="228,27,196,27,196,22,228,22"/>
+</map>

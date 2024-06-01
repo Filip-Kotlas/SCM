@@ -1,0 +1,5 @@
+<map id="CRS_Matrix::writeBinary" name="CRS_Matrix::writeBinary">
+<area shape="rect" id="Node000001" title="A sparse matrix in CRS format (counter, column index, value) is written to a binary file." alt="" coords="5,5,171,30"/>
+<area shape="rect" id="Node000002" href="$binary_i_o_8cpp.html#ad4a2fe7caf479bbe7eec5c71a5eb9c00" title=" " alt="" coords="219,5,328,30"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="171,15,203,15,203,20,171,20"/>
+</map>

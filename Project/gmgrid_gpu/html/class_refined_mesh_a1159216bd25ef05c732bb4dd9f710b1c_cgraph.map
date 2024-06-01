@@ -1,0 +1,7 @@
+<map id="RefinedMesh::Check_array_dimensions" name="RefinedMesh::Check_array_dimensions">
+<area shape="rect" id="Node000001" title=" " alt="" coords="5,24,149,62"/>
+<area shape="rect" id="Node000002" href="$class_mesh.html#a60e521e281f7e2673067ecc5eafa8fa4" title=" " alt="" coords="197,5,405,30"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="149,32,181,29,181,34,149,38"/>
+<area shape="rect" id="Node000003" href="$class_mesh.html#aa8e9755d13c5b70588b4becdae8ebf01" title=" " alt="" coords="248,55,354,79"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="149,48,232,57,232,62,149,53"/>
+</map>

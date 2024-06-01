@@ -1,0 +1,9 @@
+<map id="write_binMatrix" name="write_binMatrix">
+<area shape="rect" id="Node000001" title=" " alt="" coords="316,31,425,55"/>
+<area shape="rect" id="Node000002" href="$class_c_r_s___matrix.html#aca15533a92977a481a5eb921a7a3447a" title="A sparse matrix in CRS format (counter, column index, value) is written to a binary file." alt="" coords="103,5,268,30"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="300,36,268,32,269,26,301,31"/>
+<area shape="rect" id="Node000003" href="$class_c_r_s___matrix.html#a1fe34bd076f9d163f15dfec3c9b6cd99" title="A sparse matrix in CRS format (counter, column index, value) is written to a binary file." alt="" coords="103,55,268,79"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="301,55,269,59,268,54,300,49"/>
+<area shape="rect" id="Node000004" href="$generate_c_r_s_8cpp.html#a3c04138a5bfe5d72780bb7e82a18e627" title=" " alt="" coords="5,55,55,79"/>
+<area shape="poly" id="edge3_Node000003_Node000004" title=" " alt="" coords="87,70,55,70,55,64,87,64"/>
+</map>

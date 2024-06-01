@@ -1,0 +1,5 @@
+<map id="DiagPrecond" name="DiagPrecond">
+<area shape="rect" id="Node000001" title="Simple diagonale preconditioning." alt="" coords="5,5,102,30"/>
+<area shape="rect" id="Node000002" href="$class_matrix.html#a8fe408118f8c19adc3dabd27c9dfa03c" title=" " alt="" coords="150,5,262,30"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="102,15,134,15,134,20,102,20"/>
+</map>

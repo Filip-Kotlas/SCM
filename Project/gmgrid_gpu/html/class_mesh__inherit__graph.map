@@ -1,0 +1,5 @@
+<map id="Mesh" name="Mesh">
+<area shape="rect" id="Node000001" title="Basis class for finite element meshes." alt="" coords="27,5,81,30"/>
+<area shape="rect" id="Node000002" href="$class_refined_mesh.html" title="FE&#45;mesh with refinement procedures." alt="" coords="5,78,103,103"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="57,46,57,78,51,78,51,46"/>
+</map>

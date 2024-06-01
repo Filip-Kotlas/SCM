@@ -1,0 +1,7 @@
+<map id="Mesh::Resize_Connectivity" name="Mesh::Resize_Connectivity">
+<area shape="rect" id="Node000001" title=" " alt="" coords="5,31,186,55"/>
+<area shape="rect" id="Node000002" href="$class_mesh.html#ad998638b34fe79dff3d3a50ebbbdab5d" title=" " alt="" coords="267,5,386,30"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="185,30,251,23,252,28,186,36"/>
+<area shape="rect" id="Node000003" href="$class_mesh.html#af2cc3a39973b0daa147bceee17abb211" title=" " alt="" coords="234,55,419,79"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="186,50,218,53,218,58,185,55"/>
+</map>

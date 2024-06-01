@@ -1,0 +1,18 @@
+<map id="CRS_Matrix::cg" name="CRS_Matrix::cg">
+<area shape="rect" id="Node000001" title=" " alt="" coords="5,153,119,178"/>
+<area shape="rect" id="Node000002" href="$class_c_r_s___matrix.html#a6ddd9ef4a689cbc42d78c7dc7d1d8d78" title=" " alt="" coords="167,5,305,30"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="69,152,106,99,133,68,165,41,175,35,177,39,168,45,137,72,110,102,73,155"/>
+<area shape="rect" id="Node000003" href="$vdop_8cpp.html#ac33c2245978a449cb91db94a7c13b12f" title="Calculates the Euclidean inner product of two vectors." alt="" coords="206,55,266,79"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="77,151,116,121,165,90,190,79,192,84,168,95,119,126,80,155"/>
+<area shape="rect" id="Node000004" href="$class_matrix.html#a9067d73a113367919272fe4a2810c020" title=" " alt="" coords="180,128,292,153"/>
+<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="119,155,164,148,165,153,119,160"/>
+<area shape="rect" id="Node000006" href="$class_c_r_s___matrix.html#afa06b4a067b9d903b662c34132744ece" title=" " alt="" coords="174,177,298,202"/>
+<area shape="poly" id="edge6_Node000001_Node000006" title=" " alt="" coords="119,171,159,176,158,182,119,176"/>
+<area shape="rect" id="Node000007" href="$vdop_8cpp.html#a8373e1f53c0a09b40628abb418be9b1d" title="Element&#45;wise daxpy operation x(k) = y(k) + alpha*z(k)." alt="" coords="204,227,268,251"/>
+<area shape="poly" id="edge7_Node000001_Node000007" title=" " alt="" coords="91,176,168,211,190,220,188,225,166,216,88,181"/>
+<area shape="rect" id="Node000008" href="$vdop_8cpp.html#aa6989077542658fb26baf1bcbd0eff97" title=" " alt="" coords="210,276,262,301"/>
+<area shape="poly" id="edge8_Node000001_Node000008" title=" " alt="" coords="76,176,114,217,140,240,168,261,196,274,194,279,165,265,136,244,110,221,72,180"/>
+<area shape="poly" id="edge4_Node000004_Node000004" title=" " alt="" coords="208,129,202,119,205,110,217,104,236,101,257,104,268,111,265,116,255,109,236,107,218,109,209,113,207,119,212,126"/>
+<area shape="rect" id="Node000005" href="$class_matrix.html#af1bec1047209d7d3a70245725791cdf5" title=" " alt="" coords="353,128,455,153"/>
+<area shape="poly" id="edge5_Node000004_Node000005" title=" " alt="" coords="292,138,337,138,337,143,292,143"/>
+</map>

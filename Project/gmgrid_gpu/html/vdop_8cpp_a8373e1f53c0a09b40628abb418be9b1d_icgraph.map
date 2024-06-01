@@ -1,0 +1,14 @@
+<map id="vdaxpy" name="vdaxpy">
+<area shape="rect" id="Node000001" title="Element&#45;wise daxpy operation x(k) = y(k) + alpha*z(k)." alt="" coords="470,55,535,79"/>
+<area shape="rect" id="Node000002" href="$class_c_r_s___matrix.html#a29511d8ea6ac5792473a425bafc8c328" title=" " alt="" coords="299,5,412,30"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="455,54,394,33,396,28,457,49"/>
+<area shape="rect" id="Node000003" href="$jacsolve_8cpp.html#a5a374199a3b656437fd7f9d0319a412a" title=" " alt="" coords="310,55,401,79"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="455,70,402,70,402,64,455,64"/>
+<area shape="rect" id="Node000004" href="$class_multigrid.html#af5a3fae30800fc47a8de882dbba06c7d" title=" " alt="" coords="289,128,422,153"/>
+<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="463,89,383,130,381,125,461,85"/>
+<area shape="poly" id="edge6_Node000004_Node000004" title=" " alt="" coords="380,115,372,109,356,107,340,109,333,113,331,119,335,126,331,129,326,119,328,110,339,104,356,101,374,104,383,111"/>
+<area shape="rect" id="Node000005" href="$class_multigrid.html#a0f21bbdf22733439c05508331237a369" title=" " alt="" coords="103,128,241,153"/>
+<area shape="poly" id="edge4_Node000004_Node000005" title=" " alt="" coords="273,143,241,143,241,138,273,138"/>
+<area shape="rect" id="Node000006" href="$main_8cpp.html#a3c04138a5bfe5d72780bb7e82a18e627" title=" " alt="" coords="5,128,55,153"/>
+<area shape="poly" id="edge5_Node000005_Node000006" title=" " alt="" coords="87,143,55,143,55,138,87,138"/>
+</map>
