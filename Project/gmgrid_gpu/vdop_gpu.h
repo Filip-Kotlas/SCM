@@ -150,8 +150,8 @@ public:
         CHECK_CUDA( cudaFree(ptr) )
     }
 
-    Vec(Vec const &)  = delete;
-    Vec(Vec &&)       = delete;
+    Vec(Vec const &)  = default;
+    Vec(Vec &&)       = default;
     
 /** Copies the GPU vector @p rhs to the GPU vector.
  *

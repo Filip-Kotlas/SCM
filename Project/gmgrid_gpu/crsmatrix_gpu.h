@@ -29,7 +29,7 @@ public:
     /**
      * Constructor
      */
-    explicit CRS_Matrix_GPU();
+    CRS_Matrix_GPU();
 
 //! \brief The sparse matrix in CRS format is initialized from a binary file.
 //!
@@ -50,6 +50,8 @@ public:
 //! \param[in]   matrix to be copied
 //!
     CRS_Matrix_GPU(const CRS_Matrix& matrix);
+
+    CRS_Matrix_GPU( BisectIntDirichlet const &matrix );
     
 //! \brief The sparse matrix in CRS format is initialized from the three vectors.
 //!
@@ -81,7 +83,8 @@ public:
     * @param[in,out] w resulting vector (preallocated)
     * @param[in]     u vector
     */
-    void Mult(Vec &w, Vec const &u) const;
+    void Mult(Vec &d_w, Vec const &d_u) const;
+    void MultT(Vec const &d_w, Vec &d_u) const;
 
     /**
     * Calculates the defect/residuum r := f - K*u.
@@ -155,6 +158,7 @@ public:
 
     void GetDiag(Vec &d) const;
     void GetInvDiag(Vec &d) const;
+    void JacobiSmoother(Vec const &f, Vec &u, Vec &r, int nsmooth, double omega, bool zero) const;
 
 private:
     int _nrows;              //!< number of rows in matrix

@@ -17,6 +17,12 @@ using namespace std;
 #include <cusparse.h>
 
 //----------------------------------------------------------------------
+
+CRS_Matrix_GPU::CRS_Matrix_GPU()
+{
+    
+}
+
 CRS_Matrix_GPU::CRS_Matrix_GPU(std::vector<int>    const& rowOffset, 
                    std::vector<int>    const& colIndices, 
                    std::vector<double> const& nnzValues)
@@ -73,6 +79,7 @@ void CRS_Matrix_GPU::setupMemory_GPU(std::vector<int> const& rowOffset, std::vec
     Vec d_X(Nrows());
     Vec d_B(Nrows());	
 	cout << "MID :: CRS_Matrix_GPU::setupMemory_GPU" << endl;
+    cout << "Nrows(): " << Nrows() << ", Ncols(): " << Ncols() << std::endl; 
 
     double alpha=1.0;
     double beta =0.0;
@@ -95,6 +102,32 @@ CRS_Matrix_GPU::CRS_Matrix_GPU(CRS_Matrix const& matrix)
 :_nrows(matrix.Nrows()), _ncols(matrix.Ncols()), _nnz(matrix.Nnz())
 {
     setupMemory_GPU( matrix.get_RowOffset(), matrix.get_ColumnIndices(), matrix.get_NnzValues());
+}
+
+CRS_Matrix_GPU::CRS_Matrix_GPU( BisectIntDirichlet const &matrix)
+:_nrows(matrix.Nrows()), _ncols(matrix.Ncols())
+{
+    vector<int> rowOffset;
+    vector<int> colIndices;
+    vector<double> nnzValues;
+
+    double EPS = 1e-8;
+    int rowCount = 0;
+    for( int i = 0; i < matrix.Nrows(); i++ )
+    {
+        for( int j = 0; j < matrix.Ncols(); j++ )
+        {
+            if( abs( matrix(i, j) ) > EPS )
+            {
+                nnzValues.emplace_back( matrix(i, j) );
+                colIndices.emplace_back(j);
+                rowCount++;
+            }
+        }
+        rowOffset.emplace_back(rowCount);
+    }
+    _nnz = nnzValues.size();
+    setupMemory_GPU( rowOffset, colIndices, nnzValues);
 }
 
 CRS_Matrix_GPU::CRS_Matrix_GPU(const std::string& file)
@@ -146,6 +179,15 @@ void CRS_Matrix_GPU::Mult(Vec &d_w, Vec const &d_u) const
 	cusparseSpMV(_cusparseHandle, CUSPARSE_OPERATION_NON_TRANSPOSE,
                  &one, _matA, d_u.sphandler(), &zero, d_w.sphandler(),
                  REALTYPE, ALGTYPE, _dbufferMV) )	
+}
+
+void CRS_Matrix_GPU::MultT(Vec const &d_w, Vec &d_u) const
+{
+    double const zero(0.0), one(1.0);
+	CHECK_CUSPARSE( 
+	cusparseSpMV(_cusparseHandle, CUSPARSE_OPERATION_TRANSPOSE,
+                 &one, _matA, d_w.sphandler(), &zero, d_u.sphandler(),
+                 REALTYPE, ALGTYPE, _dbufferMV) )
 }
 
 void CRS_Matrix_GPU::Defect(Vec &d_r, Vec const &d_f, Vec const &d_u) const
@@ -286,3 +328,34 @@ void CRS_Matrix_GPU::cg(std::vector<double> &u, std::vector<double> const &f,
 //  nsys-ui  ./main.NVCC
 //    or
 //  nvvp ./main.NVCC_ data/square_100_4
+
+void CRS_Matrix_GPU::JacobiSmoother(Vec const &f, Vec &u, Vec &r, int nsmooth, double omega, bool zero) const
+{
+    {
+    // ToDO: ensure compatible dimensions
+    assert(_ncols==_nrows);
+    assert( _ncols == static_cast<int>(u.size()) ); // compatibility of inner dimensions
+    assert( _nrows == static_cast<int>(r.size()) ); // compatibility of outer dimensions
+    assert( r.size() == f.size() );
+    
+    Vec inv_diag(r.size());
+    GetInvDiag(inv_diag);        // accumulated diagonal of matrix @p SK.
+         
+    if (zero) {            // assumes initial solution is zero
+        for (int k = 0; k < _nrows; ++k) {
+            // u := u + om*D^{-1}*f
+            vdmult_gpu(u, inv_diag, f);
+            cublasDscal(_cublasHandle, _nrows, &omega, u.data(), 1);
+        }
+        --nsmooth;                           // first smoothing sweep done
+    }
+
+ 
+    for (int ns = 1; ns <= nsmooth; ++ns) {
+
+        Defect(r, f, u);
+        cublasDaxpy(_cublasHandle, _nrows, &omega, r.data(), 1, u.data(), 1 );
+    }
+    return;
+}
+}

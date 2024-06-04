@@ -1,4 +1,4 @@
-#include "vdop.h"
+//#include "vdop.h"
 #include "vdop_gpu.h"
 #include "geom.h"
 #include "getmatrix.h"
@@ -57,7 +57,7 @@ void JacobiSolve_GPU(CRS_Matrix_GPU const &d_SK, Vec const &f, Vec &u)
     //while ( sigma > tol2 && maxiter > iter)         // absolute error
     {
         ++iter;
-        cublasDaxpy(cublas_handle, nrows, &omega, w.data(), 1, u.data(), 1);            //  u := u + om*w TODO: oprav
+        cublasDaxpy(cublas_handle, nrows, &omega, w.data(), 1, u.data(), 1);            //  u := u + om*w
         d_SK.Defect(r, f, u);                  //  r := f - K*u
         vdmult_gpu(w, r, dd);                     //  w := D^{-1}*r
         double sig_old=sigma;
@@ -72,143 +72,109 @@ void JacobiSolve_GPU(CRS_Matrix_GPU const &d_SK, Vec const &f, Vec &u)
     return;
 }
 
-// #####################################################################
-void JacobiSolve(CRS_Matrix const &SK, vector<double> const &f, vector<double> &u)
-{
-    const double omega   = 1.0;
-    //const int    maxiter = 1000;
-    const int    maxiter = 240; // GH
-    const double tol  = 1e-6;                // tolerance
-    const double tol2 = tol * tol;           // tolerance^2
-
-    int nrows = SK.Nrows();                  // number of rows == number of columns
-    assert( nrows == static_cast<int>(f.size()) && f.size() == u.size() );
-
-    cout << endl << " Start Jacobi solver for " << nrows << " d.o.f.s"  << endl;
-    //  Choose initial guess
-    for (int k = 0; k < nrows; ++k) {
-        u[k] = 0.0;                          //  u := 0
-    }
-
-    vector<double> dd(nrows);                // matrix diagonal
-    vector<double>  r(nrows);                // residual
-    vector<double>  w(nrows);                // correction
-
-    SK.GetDiag(dd);                          //  dd := diag(K)
-
-    //  Initial sweep
-    SK.Defect(r, f, u);                      //  r := f - K*u
-
-    vddiv(w, r, dd);                         //  w := D^{-1}*r
-    const double sigma0 = dscapr(w, r);      // s0 := <w,r>
-
-    // Iteration sweeps
-    int iter  = 0;
-    double sigma = sigma0;
-    while ( sigma > tol2 * sigma0 && maxiter > iter)  // relative error
-    //while ( sigma > tol2 && maxiter > iter)         // absolute error
-    {
-        ++iter;
-        vdaxpy(u, u, omega, w );             //  u := u + om*w
-        SK.Defect(r, f, u);                  //  r := f - K*u
-        vddiv(w, r, dd);                     //  w := D^{-1}*r
-        double sig_old=sigma;
-        sigma = dscapr(w, r);                // s0 := <w,r>
-      	//cout << "Iteration " << iter << " : " << sqrt(sigma/sigma0) << endl;
-        if (sigma>sig_old) cout << "Divergent at iter " << iter << endl;    // GH
-    }
-    cout << "aver. Jacobi rate :  " << exp(log(sqrt(sigma / sigma0)) / iter) << "  (" << iter << " iter)" << endl;
-    cout << "final error: " << sqrt(sigma / sigma0) << " (rel)   " << sqrt(sigma) << " (abs)\n";
-
-    return;
-}
-
-
-
-void JacobiSmoother(Matrix const &SK, std::vector<double> const &f, std::vector<double> &u,
-                    std::vector<double> &r, int nsmooth, double const omega, bool zero)
+void JacobiSmoother_GPU(CRS_Matrix_GPU const &SK, Vec const &f, Vec &u,
+                    Vec &r, int nsmooth, double const omega, bool zero)
 {
     //// ToDO: ensure compatible dimensions
     SK.JacobiSmoother(f, u, r, nsmooth, omega, zero);
     return;
 }
 
-void DiagPrecond(Matrix const &SK, std::vector<double> const &r, std::vector<double> &w,
+void DiagPrecond(CRS_Matrix_GPU const &SK, Vec const &r, Vec &w,
                  double const omega)
 {
     // ToDO: ensure compatible dimensions
-    auto const &D = SK.GetDiag();        // accumulated diagonal of matrix @p SK.
-    int const nnodes = static_cast<int>(w.size());   
-    for (int k = 0; k < nnodes; ++k) {
-        w[k] = omega * r[k] / D[k];      // MPI: distributed to accumulated vector needed
-    }
+    Vec d_inv(r.size());
+    SK.GetInvDiag(d_inv);        // accumulated diagonal of matrix @p SK.
+    int const nnodes = static_cast<int>(w.size());  
+    vdmult_elem(r.size(), w.data(), r.data(), d_inv.data() );
+    cublasDscal(SK.get_cublasHandle(), r.size(), &omega, w.data(), 1);
 
     return;
 }
 
 
-Multigrid::Multigrid(Mesh const &cmesh, int const nlevel)
+Multigrid::Multigrid(Mesh const &cmesh, int const nlevel, vector<FEM_Matrix> matrices_for_setup,
+                    vector<vector<double>> u, vector<vector<double>> f, vector<vector<double>> d, vector<vector<double>> w )
     : _meshes(cmesh, nlevel),
-      _vSK(), _u(_meshes.size()), _f(_meshes.size()), _d(_meshes.size()), _w(_meshes.size()),
+      _vSK(nlevel), _u(nlevel), _f(nlevel), _d(nlevel), _w(nlevel),
       _vPc2f()
 {
     cout << "\n........................  in Multigrid::Multigrid  ..................\n";
     // Allocate Memory for matrices/vectors on all levels
     for (int lev = 0; lev < Nlevels(); ++lev) {
-        _vSK.emplace_back(_meshes[lev] );  // CRS matrix
-        const auto nn = _vSK[lev].Nrows();
-        _u[lev].resize(nn);
-        _f[lev].resize(nn);
-        _d[lev].resize(nn);
-        _w[lev].resize(nn);
+        matrices_for_setup.emplace_back( _meshes[lev] );  // CRS matrix
+        const auto nn = matrices_for_setup.back().Nrows();
+        u.resize(nn);
+        f.resize(nn);
+        d.resize(nn);
+        w.resize(nn);
         auto vv = _meshes[lev].GetFathersOfVertices();
         cout << vv.size() << endl;
     }
     // Intergrid transfer operators
     _vPc2f.emplace_back( ); // no prolongation to the coarsest grid
     for (int lev = 1; lev < Nlevels(); ++lev) {
-        _vPc2f.emplace_back( _meshes[lev].GetFathersOfVertices (), _meshes[lev-1].Index_DirichletNodes ()   );
+        _vPc2f.emplace_back( CRS_Matrix_GPU( BisectIntDirichlet( _meshes[lev].GetFathersOfVertices (), _meshes[lev-1].Index_DirichletNodes () ) ) );
         //checkInterpolation(lev);
         //checkRestriction(lev);
     }
-    cout << "\n..........................................\n";
+    std::cout << "\n..........................................\n";
 }
 
 Multigrid::~Multigrid()
 {}
 
-void Multigrid::DefineOperators()
+void Multigrid::DefineOperators(vector<FEM_Matrix> matrices_for_setup, vector<vector<double>> u, vector<vector<double>> f )
 {
     for (int lev = 0; lev < Nlevels(); ++lev) {
-        DefineOperator(lev);
+        DefineOperator(lev, matrices_for_setup[lev], u[lev], f[lev] );
     }
     return;
 }
 
-void Multigrid::DefineOperator(int lev)
+void Multigrid::DefineOperator(int lev, FEM_Matrix mat, vector<double> u, vector<double> f)
 {
     //double tstart = omp_get_wtime(); 
-    _vSK[lev].CalculateLaplace(_f[lev]);  // fNice()  in userset.h
+    mat.CalculateLaplace( f);  // fNice()  in userset.h
     //double t1 = omp_get_wtime() - tstart;             // OpenMP
     //cout << "CalculateLaplace: timing in sec. : " << t1 << "   in level " << lev << endl;
 
     if (lev == Nlevels() - 1) {                // fine mesh
-        _meshes[lev].SetValues(_u[lev], [](double x, double y) -> double
+        _meshes[lev].SetValues( u, [](double x, double y) -> double
         { return x *x * std::sin(2.5 * M_PI * y); }
                               );
     }
     else {
-        _meshes[lev].SetValues(_u[lev], f_zero);
+        _meshes[lev].SetValues( u, f_zero);
     }    
-    _vSK[lev].ApplyDirichletBC(_u[lev], _f[lev]);
+    mat.ApplyDirichletBC( u, f);
 
     return;
+}
+
+void Multigrid::finish_setup(   vector<FEM_Matrix> matrices_for_setup,
+                                vector<vector<double>> u,
+                                vector<vector<double>> f,
+                                vector<vector<double>> d, 
+                                vector<vector<double>> w )
+{
+    int nlevels = matrices_for_setup.size();
+    for(int i = 0; i < nlevels;i++)
+    {
+        std::cout << "finish setup: " << i << std::endl;
+        _vSK.emplace_back( CRS_Matrix_GPU( matrices_for_setup[i] ) );
+        _u.emplace_back( u[i] );
+        _f.emplace_back( f[i] );
+        _d.emplace_back( d[i] );
+        _w.emplace_back( w[i] );
+    }
 }
 
 void Multigrid::JacobiSolve(int lev)
 {
     assert(lev < Nlevels());
-    ::JacobiSolve(_vSK[lev], _f[lev], _u[lev]);
+    ::JacobiSolve_GPU(_vSK[lev], _f[lev], _u[lev]);
 }
 
 #include "timing.h"
@@ -221,11 +187,11 @@ void Multigrid::MG_Step(int lev, int const pre_smooth, bool const bzero, int nu)
         // GH: a factorization (once in setup) with repeated forward-backward substitution would be better
         int n_jacobi_iterations = GetMesh(lev).Nnodes()/10; // ensure accuracy for coarse grid solver
         tic();
-        JacobiSmoother(_vSK[lev], _f[lev], _u[lev], _d[lev],  n_jacobi_iterations, 1.0, true);
+        JacobiSmoother_GPU(_vSK[lev], _f[lev], _u[lev], _d[lev],  n_jacobi_iterations, 1.0, true);
         cout << "     coarse grid solver [sec]: " << toc() << endl;
     }
     else {
-        JacobiSmoother(_vSK[lev], _f[lev], _u[lev], _d[lev],  pre_smooth, 0.85, bzero || lev < Nlevels()-1);
+        JacobiSmoother_GPU(_vSK[lev], _f[lev], _u[lev], _d[lev],  pre_smooth, 0.85, bzero || lev < Nlevels()-1);
 
         if (nu > 0) {
             _vSK[lev].Defect(_d[lev], _f[lev], _u[lev]);   //   d := f - K*u
@@ -238,9 +204,10 @@ void Multigrid::MG_Step(int lev, int const pre_smooth, bool const bzero, int nu)
                 MG_Step(lev - 1, pre_smooth, false, nu);   // solve  K_H * u_H =f_H
             }
             _vPc2f[lev].Mult(_w[lev], _u[lev - 1]);         // w := P*u_H
-            vdaxpy(_u[lev], _u[lev], 1.0, _w[lev] );        // u := u + tau*w
+            double one(1.0);
+            cublasDaxpy(_vSK[lev].get_cublasHandle(), _u[lev].size(), &one, _w[lev].data(), 1, _u[lev].data(), 1 );  // u := u + tau*w
         }
-        JacobiSmoother(_vSK[lev], _f[lev], _u[lev], _d[lev],  post_smooth, 0.85, false);
+        JacobiSmoother_GPU(_vSK[lev], _f[lev], _u[lev], _d[lev],  post_smooth, 0.85, false);
     }
     return;
 }
@@ -253,7 +220,7 @@ void Multigrid::MG_Solve(int pre_smooth, double eps, int nu)
     double si(0);
     // start with zero guess
     DiagPrecond(_vSK[lev], _f[lev], _u[lev], 1.0);  // w   := D^{-1]*f
-    dscapr(_f[lev],_u[lev],s0);                     // s_0 := <f,u>
+    cublasDdot(_vSK[lev].get_cublasHandle(), _f[lev].size(), _f[lev].data(),1, _u[lev].data(), 1, &s0);     // s_0 := <f,u>
 
     bool bzero = true;                       // start with zero guess
     int  iter  = 0;
@@ -263,7 +230,7 @@ void Multigrid::MG_Solve(int pre_smooth, double eps, int nu)
         bzero=false;
         _vSK[lev].Defect(_d[lev], _f[lev], _u[lev]);    //   d := f - K*u
         DiagPrecond(_vSK[lev], _d[lev], _w[lev], 1.0);  // w   := D^{-1]*d
-        dscapr(_d[lev],_w[lev], si);                // s_i := <d,w>
+        cublasDdot(_vSK[lev].get_cublasHandle(), _d.size(), _d[lev].data(), 1, _w[lev].data(), 1, &si);       // s_i := <d,w>
         ++iter;
     } while (si>s0*eps*eps && iter<1000);
 
@@ -272,34 +239,33 @@ void Multigrid::MG_Solve(int pre_smooth, double eps, int nu)
     return;
 }
 
-[[maybe_unused]] bool Multigrid::checkInterpolation(int const lev)
-{
-    assert(1<=lev && lev<Nlevels());
-    _meshes[lev-1].SetValues(_w[lev-1], [](double x, double y) -> double
-                           { return x+y; }  );
-    _meshes[lev].SetValues(_w[lev], [](double /*x*/, double /*y*/) -> double
-                           { return -123.0; }  );
-    //static_cast<BisectInterpolation>(_vPc2f[lev]).Mult(_d[lev], _w[lev - 1]);        // d := P*w_H
-    _vPc2f[lev].Mult(_d[lev], _w[lev - 1]);        // d := P*w_H
-    
-    cout << "înterpolated  " << endl; GetMesh(lev).Visualize(_d[lev]);
-    
-    return true;
-}
 
-[[maybe_unused]] bool Multigrid::checkRestriction(int const lev)
-{
-    assert(1<=lev && lev<Nlevels());
-    _meshes[lev].SetValues(_d[lev], [](double x, double y) 
-                           { return x+y; }  );
-    _meshes[lev-1].SetValues(_w[lev-1], [](double /*x*/, double /*y*/) -> double
-                           { return -123.0; }  );
-    //static_cast<BisectInterpolation>(_vPc2f[lev]).MultT(_d[lev], _w[lev - 1]);        // w_H := R*d
-    _vPc2f[lev].MultT(_d[lev], _w[lev - 1]);        // w_H := R*d
+// [[maybe_unused]] bool Multigrid::checkInterpolation(int const lev)
+// {
+//     assert(1<=lev && lev<Nlevels());
+//     _meshes[lev-1].SetValues(_w[lev-1], [](double x, double y) -> double
+//                            { return x+y; }  );*/
+//     _meshes[lev].SetValues(_w[lev], [](double /*x*/, double /*y*/) -> double
+//                            { return -123.0; }  );
+//     //static_cast<BisectInterpolation>(_vPc2f[lev]).Mult(_d[lev], _w[lev - 1]);        // d := P*w_H
+//     _vPc2f[lev].Mult(_d[lev], _w[lev - 1]);        // d := P*w_H
     
-    cout << "restricted  " << endl; GetMesh(lev-1).Visualize(_w[lev-1]);
+//     cout << "înterpolated  " << endl; GetMesh(lev).Visualize(_d[lev]);
     
-    return true;
-}
+//     return true;
+// }
 
-
+// [[maybe_unused]] bool Multigrid::checkRestriction(int const lev)
+// {
+//     assert(1<=lev && lev<Nlevels());
+//     _meshes[lev].SetValues(_d[lev], [](double x, double y) 
+//                            { return x+y; }  );
+//     _meshes[lev-1].SetValues(_w[lev-1], [](double /*x*/, double /*y*/) -> double
+//                            { return -123.0; }  );
+//     //static_cast<BisectInterpolation>(_vPc2f[lev]).MultT(_d[lev], _w[lev - 1]);        // w_H := R*d
+//     _vPc2f[lev].MultT(_d[lev], _w[lev - 1]);        // w_H := R*d
+    
+//     cout << "restricted  " << endl; GetMesh(lev-1).Visualize(_w[lev-1]);
+    
+//     return true;
+// }

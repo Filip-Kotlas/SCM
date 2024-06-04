@@ -4,17 +4,6 @@
 #include "crsmatrix_gpu.h"
 #include <vector>
 
-
-/**
- * Solves linear system of equations  K @p u = @p f  via the Jacobi iteration.
- * We use a distributed symmetric  CSR matrix @p SK and initial guess of the
- * solution is set to 0.
- * @param[in] SK	CSR matrix
- * @param[in] f		distributed local vector storing the right hand side
- * @param[out] u	accumulated local vector storing the solution.
-*/
-void JacobiSolve(CRS_Matrix const &SK, std::vector<double> const &f, std::vector<double> &u);
-
 /**
  * Solves linear system of equations  K @p u = @p f  via the Jacobi iteration on GPU.
  * We use a distributed symmetric  CSR matrix @p SK and initial guess of the
@@ -77,7 +66,8 @@ class Multigrid
         * @param[in] nlevel  number of meshes in hierarchy, including the initial coarse mesh
         *
 		*/
-       Multigrid(Mesh const& cmesh, int nlevel);
+       Multigrid(Mesh const &cmesh, int nlevel, std::vector<FEM_Matrix> matrices_for_setup,
+                std::vector<std::vector<double>> u, std::vector<std::vector<double>> f, std::vector<std::vector<double>> d, std::vector<std::vector<double>> w );
 
        Multigrid(Multigrid const&)            = delete;
        Multigrid& operator=(Multigrid const&) = delete;
@@ -105,20 +95,29 @@ class Multigrid
        /**
 		 * @return  Solution vector at level @p lev .
 		 */
-       [[nodiscard]] std::vector<double> const&  GetSolution(int lev) const
+       [[nodiscard]] Vec const&  GetSolution(int lev) const
        { return _u.at(lev); }
 
        /**
 		 * Calculates PDE matrices for all levels.
 		 */
-       void DefineOperators();
+       void DefineOperators( std::vector<FEM_Matrix> matrices_for_setup, std::vector<std::vector<double>> u, std::vector<std::vector<double>> f );
 
        /**
         * Calculates PDE matrix for level @p lev.
         *
         * @param[in] lev  level in hierachy
 		*/
-       void DefineOperator(int lev);
+       void DefineOperator(int lev, FEM_Matrix mat, std::vector<double> u, std::vector<double> f);
+
+        /**
+        * Transfers data from temporary objects to the class atributes.
+		*/
+       void finish_setup(   std::vector<FEM_Matrix> matrices_for_setup,
+                            std::vector<std::vector<double>> u,
+                            std::vector<std::vector<double>> f,
+                            std::vector<std::vector<double>> d, 
+                            std::vector<std::vector<double>> w );
 
        /**
         * Solves the system of equations at level @p lev via Jacobi iterations
@@ -153,10 +152,10 @@ class Multigrid
 
     private:
        gMesh_Hierarchy _meshes;                 //!< mesh hierarchy from coarse (level 0) to fine.
-       std::vector<FEM_Matrix>           _vSK;  //!< Sparse matrix on each level.
-       std::vector<std::vector<double>>   _u;   //!< Solution vector on each level.
-       std::vector<std::vector<double>>   _f;   //!< Right hand side vector on each level.
-       std::vector<std::vector<double>>   _d;   //!< Defect vector on each level.
-       std::vector<std::vector<double>>   _w;   //!< Correction vector on each level.
-       std::vector<BisectIntDirichlet> _vPc2f;  //!< Interpolation to level from next coarser level.
+       std::vector<CRS_Matrix_GPU>           _vSK;  //!< Sparse matrix on each level.
+       std::vector<Vec>   _u;   //!< Solution vector on each level.
+       std::vector<Vec>   _f;   //!< Right hand side vector on each level.
+       std::vector<Vec>   _d;   //!< Defect vector on each level.
+       std::vector<Vec>   _w;   //!< Correction vector on each level.
+       std::vector<CRS_Matrix_GPU> _vPc2f;  //!< Interpolation to level from next coarser level.
 };

@@ -711,7 +711,6 @@ int BisectInterpolation::fetch(int row, int col) const
     int idx(-1);
     if (_iv[2 * row  ] == col) idx = 2 * row;
     if (_iv[2 * row + 1] == col) idx = 2 * row + 1;
-    assert(idx >= 0);
     return idx;
 }
 
@@ -734,6 +733,24 @@ void BisectIntDirichlet::MultT(vector<double> const &wf, vector<double> &uc) con
     }
 
     return;
+}
+
+double BisectIntDirichlet::operator()(int row, int col) const
+{
+    double elem;
+    int index = fetch(row, col);
+    if( index == -1 )
+        elem = 0;
+    else
+        elem = _vv[index];
+    
+    for( int kc : _idxDir)
+    {
+        if(index == kc)
+            elem = 0;
+    }
+
+    return elem;
 }
 
 // #####################################################################

@@ -51,7 +51,7 @@ int main(int argc , char **argv )
         //cout << "Intervalls: " << NXglob << " x " << NYglob << endl;
 
 // ##################### STL ###########################################
-//#define MG
+#define MG
 #ifndef MG
 {                                  // Jacobi iteration
         int nrefine = 1;
@@ -130,18 +130,25 @@ int main(int argc , char **argv )
         int nrefine = 3;
         if (argc>1)  nrefine = atoi(argv[1]);
 
+        vector<FEM_Matrix> setup_matrices;
+        vector<vector<double>> u;
+        vector<vector<double>> f;
+        vector<vector<double>> d;
+        vector<vector<double>> w;
+
         //Multigrid ggm(Mesh("square_100.txt"),nrefine);
-        Multigrid ggm(Mesh("square_10.txt"),nrefine);
+        Multigrid ggm(Mesh("square_10.txt"), nrefine, setup_matrices, u, f, d, w);
 
-        ggm.DefineOperators();
+        ggm.DefineOperators(setup_matrices, u, f);
+        ggm.finish_setup(setup_matrices, u, f, d, w);
 
-        cout << "\n#############  SOLVE   ###############\n";
+        std::cout << "\n#############  SOLVE   ###############\n";
         tic();
         //ggm.JacobiSolve(my_level);
         //ggm.MG_Step(my_level, 1, true, 1);
         ggm.MG_Solve(2, 1e-6, 1);
 
-        cout << "MgSolve: timing in sec. : " << toc() << "   for " << ggm.Ndofs()<< " dofs"<< endl;
+        std::cout << "MgSolve: timing in sec. : " << toc() << "   for " << ggm.Ndofs()<< " dofs"<< endl;
 
         //Test_solver(nrefine-1, {1,2,4,8,16,32,64,128,256}, ggm);
 

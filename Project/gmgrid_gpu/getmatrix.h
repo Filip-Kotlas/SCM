@@ -599,6 +599,8 @@ class BisectIntDirichlet: public BisectInterpolation
         * @param[in,out]     uc resulting coarse vector (preallocated)
         */
        void MultT(std::vector<double> const &wf, std::vector<double> &uc) const override;
+
+       double operator()(int row, int col) const;
        
     private:
        std::vector<int> const _idxDir;  //!< Indices of the Dirichlet nodes
